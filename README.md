@@ -17,3 +17,7 @@ the system. Students will also be able to submit their educational requests, whi
 <h2>Mind Online Game</h2>
 <p>Mind is a multiplayer board game that you can play online with other players, or you can play it with bots. You can create lobby and other players can join your game.</p>
 
+<h2>Flight Service Backends</h2>
+<p>A flight reservation back-end service implemented with nodejs.</p>
+
+<h5>Note: Some of my projects are private and cannot be publicly shared at this time</h5>
