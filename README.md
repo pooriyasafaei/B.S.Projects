@@ -20,4 +20,9 @@ the system. Students will also be able to submit their educational requests, whi
 <h2>Flight Service Backends</h2>
 <p>A flight reservation back-end service implemented with nodejs.</p>
 
+<h2>SAW</h2>
+<p>When studying self-avoiding walks of length n, we encounter challenges due to the growing state space, especially for large n, and even random
+sampling from it can be quite difficult. The aim is to statistically investigate various properties of self-avoiding walks by implementing an MCMC
+(Markov Chain Monte Carlo) algorithm.</p>
+
 <h5>Note: Some of my projects are private and cannot be publicly shared at this time</h5>
