@@ -1,0 +1,408 @@
+//@version=5
+strategy("Main Risk Strategy", overlay = true)
+
+
+show_rsi_sd(RSI2Length, RSI2SDColorIn) => 
+    ShowSD2    = true
+    
+    RSI2OBOSIn  = "70 / 30"
+    NumberOfConfirmationBarsRSI2 = 3
+    
+    RSI2SupportColorIn     = color.new(color.lime, 92)
+    RSI2ResistanceColorIn  = color.new(color.red,  92)
+    
+    RSI2 = ta.rsi(close,  RSI2Length)
+    
+    RSI2OB = RSI2OBOSIn == "70 / 30" ? 70 : 
+       RSI2OBOSIn == "75 / 25" ? 75 : RSI2OBOSIn == "80 / 20" ? 80 : 
+       RSI2OBOSIn == "90 / 10" ? 90 : RSI2OBOSIn == "95 / 5" ? 95 : 100
+    RSI2OS = RSI2OBOSIn == "70 / 30" ? 30 : 
+       RSI2OBOSIn == "75 / 25" ? 25 : RSI2OBOSIn == "80 / 20" ? 20 : 
+       RSI2OBOSIn == "90 / 10" ? 10 : RSI2OBOSIn == "95 / 5" ? 5 : 0
+    
+    
+    RSI2incrementer_up   = RSI2 > RSI2OB ? 1 : 0
+    RSI2incrementer_down = RSI2 < RSI2OS ? 1 : 0
+    RSI2incrementer_both = RSI2 > RSI2OB or RSI2 < RSI2OS ? 1 : 0
+    
+    
+    RSI2rsx = 0
+    
+    
+    if RSI2incrementer_both
+        RSI2rsx := nz(RSI2rsx[1], 0) + RSI2incrementer_both
+        RSI2rsx
+    else
+        RSI2rsx = 0
+        RSI2rsx
+    
+    RSI2rxH = if RSI2rsx >= NumberOfConfirmationBarsRSI2
+        RSI2x = high
+        RSI2x
+    RSI2rxL = if RSI2rsx >= NumberOfConfirmationBarsRSI2
+        RSI2y = low
+        RSI2y
+    
+    RSI2rH = fixnan(RSI2rxH)
+    RSI2rL = fixnan(RSI2rxL)
+    
+    
+    
+    ///////////////////////////////////////////////////////
+    
+    
+    RSI2rsu = 0
+    
+    
+    if RSI2incrementer_up
+        RSI2rsu := nz(RSI2rsu[1], 0) + RSI2incrementer_up
+        RSI2rsu
+    else
+        RSI2rsu = 0
+        RSI2rsu
+    
+    
+    RSI2rssH = if RSI2rsu >= NumberOfConfirmationBarsRSI2
+        RSI2x = high
+        RSI2x
+    
+    
+    RSI2rssL = if RSI2rsu >= NumberOfConfirmationBarsRSI2
+        RSI2y = low
+        RSI2y
+    
+    RSI2ResistanceZoneHigh = fixnan(RSI2rssH)
+    RSI2ResistanceZoneLow  = fixnan(RSI2rssL)
+    
+    
+    ////////////////////////////////////////////////////////
+    
+    
+    RSI2rsd = 0
+    
+    
+    if RSI2incrementer_down
+        RSI2rsd := nz(RSI2rsd[1], 0) + RSI2incrementer_down
+        RSI2rsd
+    else
+        RSI2rsd = 0
+        RSI2rsd
+    
+    RSI2rsrH = if RSI2rsd >= NumberOfConfirmationBarsRSI2
+        RSI2x = high
+        RSI2x
+    
+    RSI2rsrL = if RSI2rsd >= NumberOfConfirmationBarsRSI2
+        RSI2y = low
+        RSI2y
+    
+    
+    RSI2SupportZoneHigh = fixnan(RSI2rsrH)
+    RSI2SupportZoneLow  = fixnan(RSI2rsrL)
+    
+    
+    ////////////////////////////////////////////////////////
+    
+    RSI2_ResZoneColor = RSI2ResistanceZoneHigh !=  RSI2ResistanceZoneHigh[1] ?  na : RSI2ResistanceColorIn
+    RSI2_SupZoneColor = RSI2SupportZoneLow     !=  RSI2SupportZoneLow[1]     ?  na : RSI2SupportColorIn
+    
+    RSI2SDColor       = RSI2rH != RSI2rH[1]?                                    na : RSI2SDColorIn
+    
+    ////////////////////////////////////////////////////////
+    
+    
+    PriceInRSI2SDZone     = (close <= RSI2rH) and (close >= RSI2rL) and (RSI2rH == RSI2rH[1])
+    PriceEntersRSI2SDZone = (PriceInRSI2SDZone and not PriceInRSI2SDZone[1])
+    [RSI2rH, RSI2rL]
+    
+    
+
+get_ha_sit(res) =>
+    ha_t = ticker.heikinashi(syminfo.tickerid)
+    ha_open = request.security(ha_t, res, open)
+    ha_close = request.security(ha_t, res, close)
+    ha_dif = ha_open-ha_close
+    ha_diff = (ha_dif > 0) ? -1 : (ha_dif < 0) ? 1 : 0
+    ha_diff
+    // ha_diff = 0
+    // if ha_dif > 0
+    //     ha_diff = -1 // sell
+    // else if ha_dif < 0
+    //     ha_diff = 1 // buy
+    // else
+    //     ha_diff = 0 // tokhom
+    // ha_diff
+
+
+get_adx(len, th) =>
+    TrueRange = math.max(math.max(high-low, math.abs(high-nz(close[1]))), math.abs(low-nz(close[1])))
+    DirectionalMovementPlus = high-nz(high[1]) > nz(low[1])-low ? math.max(high-nz(high[1]), 0): 0
+    DirectionalMovementMinus = nz(low[1])-low > high-nz(high[1]) ? math.max(nz(low[1])-low, 0): 0
+    
+    SmoothedTrueRange = 0.0
+    SmoothedTrueRange := nz(SmoothedTrueRange[1]) - (nz(SmoothedTrueRange[1])/len) + TrueRange
+    
+    SmoothedDirectionalMovementPlus = 0.0
+    SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - (nz(SmoothedDirectionalMovementPlus[1])/len) + DirectionalMovementPlus
+    
+    SmoothedDirectionalMovementMinus = 0.0
+    SmoothedDirectionalMovementMinus := nz(SmoothedDirectionalMovementMinus[1]) - (nz(SmoothedDirectionalMovementMinus[1])/len) + DirectionalMovementMinus
+    
+    DIPlus = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+    DIMinus = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+    DX = math.abs(DIPlus-DIMinus) / (DIPlus+DIMinus)*100
+    ADX = ta.sma(DX, len)
+    ADX
+
+
+[rz_1_result_high, rz_1_result_low] = show_rsi_sd(14, color.new(color.yellow, 85))
+[rz_2_result_high, rz_2_result_low] = show_rsi_sd(21, color.new(color.orange, 85))
+[rz_3_result_high, rz_3_result_low] = show_rsi_sd(28, color.new(color.red, 85))
+
+length = 600
+src = hlc3
+ma = ta.sma(src, length)
+cci = (src - ma) / (0.015 * ta.dev(src, length))
+// band1 = hline(100, "Upper Band", color=#787B86, linestyle=hline.style_dashed)
+// band0 = hline(-100, "Lower Band", color=#787B86, linestyle=hline.style_dashed)
+
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+typeMA = "SMA"
+smoothingLength = 5
+
+smoothingLine = ma(cci, smoothingLength, typeMA)
+
+
+rsiLengthInput = 420
+rsiSourceInput = close
+maTypeInput = "SMA"
+maLengthInput = 80
+bbMultInput = 2.0
+
+up = ta.rma(math.max(ta.change(rsiSourceInput), 0), rsiLengthInput)
+down = ta.rma(-math.min(ta.change(rsiSourceInput), 0), rsiLengthInput)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiMA = ma(rsi, maLengthInput, maTypeInput)
+isBB = maTypeInput == "Bollinger Bands"
+
+
+
+
+ma_count = input(40,title='Average')
+cross_average = input(40,title='Cross Average')
+tp = input.float(0.002,title='tp')
+
+
+blasing_ma_index = 2
+
+
+
+blasing_ma = ta.ema(close, blasing_ma_index)
+base_ma_small = ta.ema(close, 72)
+base_ma_big = ta.ema(close, 360)
+base_ma_big_high = ta.ema(high, 360)
+base_ma_big_low = ta.ema(low, 360)
+index_ma_15 = ta.ema(close, 720)
+
+
+distance_ma = (math.abs(base_ma_big - index_ma_15) / index_ma_15) * 100
+
+
+signal_1_big = ta.cross(blasing_ma, base_ma_big) ? 1 : 0
+signal_1_ma_big = ta.ema(signal_1_big, ma_count)*ma_count
+
+
+signal_0_high = ta.crossover(blasing_ma, base_ma_big_high) ? 1 : ta.crossunder(blasing_ma, base_ma_big_high) ? -1 : 0
+signal_0_low = ta.crossover(blasing_ma, base_ma_big_low) ? 1 : ta.crossunder(blasing_ma, base_ma_big_low) ? -1 : 0
+signal_0_ma_high = ta.ema(signal_0_high, cross_average) * cross_average
+signal_0_ma_low = ta.ema(signal_0_low, cross_average) * cross_average
+
+
+sit_signal = get_ha_sit('2') + get_ha_sit('4') + get_ha_sit('6') + get_ha_sit('8') + get_ha_sit('10') + get_ha_sit('12') + get_ha_sit('14') + get_ha_sit('16') + get_ha_sit('18')
+base_sit_signal = (sit_signal > 8) ? 1 : (sit_signal < -8) ? -1 : 0
+final_sit_signal = ta.ema(base_sit_signal, 50)
+
+sit_signal_8 = get_ha_sit('2') + get_ha_sit('4') + get_ha_sit('6') + get_ha_sit('8') + get_ha_sit('10') + get_ha_sit('12') + get_ha_sit('14') + get_ha_sit('16')
+base_sit_signal_8 = (sit_signal_8 > 7) ? 1 : (sit_signal_8 < -7) ? -1 : 0
+final_sit_signal_8 = ta.ema(base_sit_signal_8, 50)
+
+// plot(signal_1_ma_big, "Signal Result", color=color.orange)
+// plot(signal_0_ma_high, "high", color=color.green)
+// plot(signal_0_ma_low, "low", color=color.red)
+// plot(dif_ma, "dif_ma", color=color.white)
+// plot(index_dif, "index_dif", color=color.green)
+
+
+// plot(final_sit_signal, "final sit", color=(final_sit_signal > 0) ? color.green : (final_sit_signal < 0) ? color.red : color.yellow)
+
+
+
+
+
+devUp1 = 1.28
+devDn1 = 1.28
+
+devUp2 = 2.01
+devDn2 = 2.01
+
+devUp3 = 2.51
+devDn3 = 2.51
+
+devUp4 = 3.09
+devDn4 = 3.09
+
+devUp5 = 4.01
+devDn5 = 4.01
+
+// showDv2 = input(true, type=bool, title="Show second group of bands?")
+// showDv3 = input(true, type=bool, title="Show third group of bands?")
+// showDv4 = input(false, type=bool, title="Show fourth group of bands?")
+// showDv5 = input(false, type=bool, title="Show fifth group of bands?")
+
+// showPrevVWAP = input(false, type=bool, title="Show previous VWAP close")
+
+start = request.security(syminfo.tickerid, "D", time)
+
+
+newSession = ta.change(start) ? 1 : 0
+float vwapsum = 0.0
+vwapsum := newSession ? hl2*volume : vwapsum[1]+hl2*volume
+
+
+float volumesum = 0.0
+volumesum := newSession ? volume : volumesum[1]+volume
+
+float v2sum = 0.0
+v2sum := newSession ? volume*hl2*hl2 : v2sum[1]+volume*hl2*hl2
+
+myvwap = vwapsum/volumesum
+dev = math.sqrt(math.max(v2sum/volumesum - myvwap*myvwap, 0))
+
+
+rsi_zone_result =  not ((close <= rz_1_result_high) and (close >= rz_1_result_low) and (rz_1_result_high == rz_1_result_high[1])) and not ((close <= rz_2_result_high) and (close >= rz_2_result_low) and (rz_2_result_high == rz_2_result_high[1])) and not ((close <= rz_3_result_high) and (close >= rz_3_result_low) and (rz_3_result_high == rz_3_result_high[1]))
+
+plot(myvwap, "myvwap", color=color.green)
+plot(rz_3_result_low, "rz_3_result_low", color=color.yellow)
+
+
+if signal_1_ma_big > 2.5
+    if signal_0_ma_high > 1 and low > base_ma_big_high
+        strategy.entry(id="Open Long", direction=strategy.long)
+        // strategy.exit("Close Long", "Open Long", profit=close * tp / syminfo.mintick, loss=low * sl / syminfo.mintick)
+        if high > myvwap + devUp5 * dev
+            strategy.exit("Close Long", "Open Long", profit=close * tp / syminfo.mintick, stop=base_ma_big_low * 0.997)
+        else if high > myvwap + devUp4 * dev
+            if rz_3_result_low < myvwap + devUp5 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.001, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap + devUp5 * dev, stop=base_ma_big_low * 0.997)
+            // strategy.exit("Close Long", "Open Long", limit=myvwap + devUp5 * dev, stop=base_ma_big_low * 0.997)
+
+        else if high > myvwap + devUp3 * dev
+            if rz_3_result_low < myvwap + devUp4 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap + devUp4 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap + devUp4 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap + devUp2 * dev
+            if rz_3_result_low < myvwap + devUp3 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap + devUp3 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap + devUp3 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap + devUp2 * dev
+            if rz_3_result_low < myvwap + devUp2 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap + devUp2 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap + devUp2 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap
+            if rz_3_result_low < myvwap + devUp1 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap + devUp1 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap + devUp1 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap - devDn1 * dev
+            if rz_3_result_low < myvwap and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap, stop=base_ma_big_low * 0.997)
+        else if high > myvwap - devDn2 * dev
+            if rz_3_result_low < myvwap - devDn1 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap - devDn1 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap - devDn1 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap - devDn3 * dev
+            if rz_3_result_low < myvwap - devDn2 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap - devDn2 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap - devDn2 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap - devDn4 * dev
+            if rz_3_result_low < myvwap - devDn3 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap - devDn3 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap - devDn3 * dev, stop=base_ma_big_low * 0.997)
+        else if high > myvwap - devDn5 * dev
+            if rz_3_result_low < myvwap - devDn4 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap - devDn4 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap - devDn4 * dev, stop=base_ma_big_low * 0.997)
+        else
+            if rz_3_result_low < myvwap - devDn5 * dev and close < rz_3_result_low
+                strategy.exit("Close Long", "Open Long", limit=rz_3_result_low * 1.002, stop=base_ma_big_low * 0.997)
+            else
+                strategy.exit("Close Long", "Open Long", limit=myvwap - devDn5 * dev, stop=base_ma_big_low * 0.997)
+
+            // strategy.exit("Close Long", "Open Long", limit=myvwap - devDn5 * dev, stop=base_ma_big_low * 0.997)
+            
+    if signal_0_ma_low < -1 and high < base_ma_big_low and rsi < rsiMA and smoothingLine < -30
+        strategy.entry(id="Open Short", direction=strategy.short)
+        if close < myvwap - devDn5 * dev
+            strategy.exit("Close Short", "Open Short", profit=close * tp / syminfo.mintick, stop=base_ma_big_high * 1.003)
+        else if close < myvwap - devDn4 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap - devDn5 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap - devDn3 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap - devDn4 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap - devDn2 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap - devDn3 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap - devDn1 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap - devDn2 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap
+            strategy.exit("Close Short", "Open Short", limit=myvwap - devDn1 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap + devDn1 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap, stop=base_ma_big_high * 1.003)
+        else if close < myvwap + devDn2 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap + devUp1 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap + devDn3 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap + devUp2 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap + devDn4 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap + devUp3 * dev, stop=base_ma_big_high * 1.003)
+        else if close < myvwap + devDn5 * dev
+            strategy.exit("Close Short", "Open Short", limit=myvwap + devUp4 * dev, stop=base_ma_big_high * 1.003)
+        else
+            strategy.exit("Close Short", "Open Short", limit=myvwap + devUp5 * dev, stop=base_ma_big_high * 1.003)
+
+
+
+

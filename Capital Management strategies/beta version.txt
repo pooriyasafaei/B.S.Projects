@@ -1,0 +1,136 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © merankerra
+
+//@version=5
+// indicator(title="Agent Indicator!")
+strategy("Agent Strategy 3", overlay = true)
+
+
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "Bollinger Bands" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+
+
+base_ma_index = 72
+blasing_ma_index = 2
+base_ma_high = ta.ema(high, base_ma_index)
+base_ma_low = ta.ema(low, base_ma_index)
+base_ma_close = ta.ema(close, base_ma_index)
+blasing_ma = ta.ema(close, blasing_ma_index)
+base_ma_big = ta.ema(close, 360)
+base_ma_big_high = ta.ema(high, 360)
+base_ma_big_low = ta.ema(low, 360)
+
+
+
+rsiLengthInput = 50
+rsiSourceInput = close
+maTypeInput = "SMMA (RMA)"
+maLengthInput = 50
+
+
+up = ta.rma(math.max(ta.change(rsiSourceInput), 0), rsiLengthInput)
+down = ta.rma(-math.min(ta.change(rsiSourceInput), 0), rsiLengthInput)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiMA = ma(rsi, maLengthInput, maTypeInput)
+
+
+sma = 12
+lma = 21
+tsp = 9
+np = 50
+type = 1
+
+sh = ta.ema(close,sma)  
+
+lon= ta.ema(close,lma)
+
+ratio = math.min(sh,lon)/math.max(sh,lon)
+Mac = if sh > lon
+    1-ratio
+else
+    ratio-1
+MacNorm = ((Mac-ta.lowest(Mac, np)) /(ta.highest(Mac, np)-ta.lowest(Mac, np)+.000001)*2)- 1
+MacNorm2 = if np<2
+    Mac
+else
+    MacNorm
+    
+Trigger = ta.wma(MacNorm2, tsp)
+
+
+ma_count = input(5,title='Average')
+signal_2_weight = input(5,title='Signal 2 Weight')
+signal_3_weight = input(5,title='Signal 3 Weight')
+total_signal_limit = input.float(5,title='total signal')
+sl = input.float(0.002,title='sl')
+tp = input.float(0.002,title='tp')
+slope = input.float(0.002,title='slope')
+
+
+
+signal_0_ma = ta.crossover(blasing_ma, base_ma_close) ? 1 : ta.crossunder(blasing_ma, base_ma_close) ? -1 : 0
+signal_1 = ta.cross(blasing_ma, base_ma_close) ? 1 : 0
+signal_1_ma = ta.ema(signal_1, ma_count) * ma_count
+
+signal_0_ma_big = ta.crossover(blasing_ma, base_ma_big) ? 1 : ta.crossunder(blasing_ma, base_ma_big) ? -1 : 0
+signal_1_big = ta.cross(blasing_ma, base_ma_big) ? 1 : 0
+signal_1_ma_big = ta.ema(signal_1_big, ma_count)*ma_count
+
+signal_0_ma_high = ta.crossover(blasing_ma, base_ma_high) ? 1 : ta.crossunder(blasing_ma, base_ma_high) ? -1 : 0
+signal_1_high = ta.cross(blasing_ma, base_ma_high) ? 1 : 0
+signal_1_ma_high = ta.ema(signal_1_high, ma_count) * ma_count
+
+signal_0_low = ta.crossover(blasing_ma, base_ma_low) ? 1 : ta.crossunder(blasing_ma, base_ma_low) ? -1 : 0
+signal_1_low = ta.cross(blasing_ma, base_ma_low) ? 1 : 0
+signal_1_ma_low = ta.ema(signal_1_low, ma_count) * ma_count
+
+signal_0_big_high = ta.crossover(blasing_ma, base_ma_big_high) ? 1 : ta.crossunder(blasing_ma, base_ma_big_high) ? -1 : 0
+signal_1_big_high = ta.cross(blasing_ma, base_ma_big_high) ? 1 : 0
+signal_1_big_ma_high = ta.ema(signal_1_big_high, ma_count) * ma_count
+
+signal_0_big_low = ta.crossover(blasing_ma, base_ma_low) ? 1 : ta.crossunder(blasing_ma, base_ma_low) ? -1 : 0
+signal_1_big_low = ta.cross(blasing_ma, base_ma_big_low) ? 1 : 0
+signal_1_big_ma_low = ta.ema(signal_1_big_low, ma_count) * ma_count
+
+
+signal_2 = ta.crossover(rsi, rsiMA) ? 1 : ta.crossunder(rsi, rsiMA) ? -1 : 0
+signal_2_ma = ta.ema(signal_2, 3)*3
+
+signal_3 = ta.crossover(Trigger, MacNorm2) ? -1 : ta.crossunder(Trigger, MacNorm2) ? 1 : 0
+signal_3_ma = ta.ema(signal_3, 3)*3
+
+
+total_signal = (((signal_2_ma * signal_2_weight) + (signal_3_ma * signal_3_weight)) / (signal_2_weight + signal_3_weight)) * 2
+plot(total_signal, "total signal", color=color.orange)
+plot(signal_0_ma, "signal 0", color=color.blue)
+plot(signal_1_ma, "signal 1", color=color.white)
+plot(signal_1_ma_big, "signal_1_ma_big", color=color.gray)
+plot(signal_0_ma_big, "signal_0_ma_big", color=color.purple)
+plot(signal_2_ma, "signal 2", color=color.green)
+plot(signal_3_ma, "signal 3", color=color.yellow)
+
+
+
+slope_72 = ((base_ma_close - base_ma_close[3]) / (3 * base_ma_close)) * 100
+slope_360 = ((base_ma_big - base_ma_big[3]) / (3 * base_ma_close)) * 100
+
+// plot(slope_72, "slope 72", color=color.yellow)
+// plot(slope_360, "slope 360", color=color.white)
+
+if (slope_360 > slope or slope_360 < -slope)
+    if signal_1_ma >= 2 or signal_1_ma_big >= 2 or signal_1_ma_low >= 2 or signal_1_ma_high >= 2 or signal_1_big_ma_high >= 2 or signal_1_big_ma_low >= 2
+        if ((signal_0_ma > 0) or (signal_1_ma_low > 0) or (signal_0_ma_big > 0)) and (total_signal > total_signal_limit) and (close > base_ma_big)
+            strategy.entry(id="Open Long", direction=strategy.long)
+            strategy.exit("Close Long", "Open Long", profit=close * tp / syminfo.mintick, loss=close * sl / syminfo.mintick)
+        else if (signal_0_ma < 0 or signal_1_ma_high < 0 or signal_0_ma_big < 0) and (total_signal < -total_signal_limit) and (close < base_ma_big)
+            strategy.entry(id="Open Short", direction=strategy.short)
+            strategy.exit("Close Short", "Open Short", profit=close * tp / syminfo.mintick, loss=close * sl / syminfo.mintick)
+    
+        
