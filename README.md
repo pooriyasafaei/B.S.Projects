@@ -11,4 +11,9 @@
 the system. Students will also be able to submit their educational requests, which will be reviewed by university authorities.</p>
 
 
+<h2>Capital Management Tester</h2>
+<p>An implementation that tests some different capital management strategies on a specific trade strategy.</p>
+
+<h2>Mind Online Game</h2>
+<p>Mind is a multiplayer board game that you can play online with other players, or you can play it with bots. You can create lobby and other players can join your game.</p>
 
