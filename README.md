@@ -25,4 +25,7 @@ the system. Students will also be able to submit their educational requests, whi
 sampling from it can be quite difficult. The aim is to statistically investigate various properties of self-avoiding walks by implementing an MCMC
 (Markov Chain Monte Carlo) algorithm.</p>
 
+<h2>DRL in Finance</h2>
+<p>Deep Reinforcement Learning in Financial Trading. (Includes code implementations and evaluations of prominent DRL algorithms.)</p>
+
 <h5>Note: Other bachelor projects will be added to this repository. Some of my projects are private and cannot be publicly shared at this time</h5>
